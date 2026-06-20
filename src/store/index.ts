@@ -158,6 +158,23 @@ class Store {
       }
     }
 
+    if (data.date === getTodayStr()) {
+      const plan = this.getTodayPlan();
+      if (plan && (plan.status === 'in_progress' || plan.status === 'planning')) {
+        const item = plan.items.find((i) => i.cardId === data.cardId);
+        if (item && item.status !== 'completed') {
+          if (data.result === 'completed') {
+            this.updateTodayPlanItem(data.cardId, {
+              status: 'completed',
+              actualDurationMin: data.durationMin,
+              completedAt: now,
+              note: data.problems || ''
+            });
+          }
+        }
+      }
+    }
+
     this.notify();
     return record;
   }
@@ -356,6 +373,9 @@ class Store {
     const plan = this.getTodayPlan();
     if (!plan || plan.status !== 'in_progress') return;
 
+    const item = plan.items.find((i) => i.cardId === cardId);
+    if (!item || item.status === 'completed') return;
+
     const now = new Date().toISOString();
     this.updateTodayPlanItem(cardId, {
       status: 'completed',
@@ -363,9 +383,6 @@ class Store {
       completedAt: now,
       note
     });
-
-    const cardPlanItem = plan.items.find((i) => i.cardId === cardId);
-    if (!cardPlanItem || cardPlanItem.status === 'completed') return;
 
     const card = this.getCard(cardId);
     if (card) {
@@ -467,6 +484,61 @@ class Store {
     if (!plan) return null;
     const item = plan.items.find((i) => i.cardId === cardId);
     return item?.status || null;
+  }
+
+  isCardDoneToday(cardId: string): boolean {
+    const planStatus = this.getTodayPlanItemStatus(cardId);
+    if (planStatus === 'completed') return true;
+
+    const today = getTodayStr();
+    const todayRecords = this.records.filter(
+      (r) => r.cardId === cardId && r.date === today && r.result === 'completed'
+    );
+    return todayRecords.length > 0;
+  }
+
+  markCardDoneToday(cardId: string): void {
+    const plan = this.getTodayPlan();
+    if (plan && plan.status === 'in_progress' && this.isCardInTodayPlan(cardId)) {
+      const card = this.getCard(cardId);
+      this.completeTodayPlanItem(cardId, card?.durationMin || 30);
+      return;
+    }
+
+    const today = getTodayStr();
+    const card = this.getCard(cardId);
+    this.addRecord({
+      cardId,
+      date: today,
+      durationMin: card?.durationMin || 30,
+      result: 'completed',
+      problems: '',
+      gains: ''
+    });
+  }
+
+  unmarkCardDoneToday(cardId: string): void {
+    const plan = this.getTodayPlan();
+    if (plan && plan.status === 'in_progress' && this.isCardInTodayPlan(cardId)) {
+      this.updateTodayPlanItem(cardId, {
+        status: 'pending',
+        actualDurationMin: undefined,
+        completedAt: undefined,
+        note: undefined
+      });
+      return;
+    }
+
+    const today = getTodayStr();
+    const todayCompletedRecords = this.records.filter(
+      (r) => r.cardId === cardId && r.date === today && r.result === 'completed'
+    );
+    if (todayCompletedRecords.length > 0) {
+      const latestRecord = todayCompletedRecords.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0];
+      this.deleteRecord(latestRecord.id);
+    }
   }
 }
 

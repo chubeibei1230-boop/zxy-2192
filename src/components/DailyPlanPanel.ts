@@ -333,6 +333,10 @@ export class DailyPlanPanel {
             <span class="summary-stat-value">${summary.completedCount}</span>
             <span class="summary-stat-label">已完成</span>
           </div>
+          <div class="summary-stat-card stat-pending">
+            <span class="summary-stat-value">${summary.pendingCount}</span>
+            <span class="summary-stat-label">未完成</span>
+          </div>
           <div class="summary-stat-card stat-warning">
             <span class="summary-stat-value">${summary.skippedCount}</span>
             <span class="summary-stat-label">已跳过</span>

@@ -10,7 +10,6 @@ import { store } from '../store';
 export class RouteView {
   private el: HTMLElement;
   private onCardClick: (id: string) => void;
-  private done: Set<string> = new Set();
 
   constructor(onCardClick: (id: string) => void) {
     this.onCardClick = onCardClick;
@@ -24,7 +23,7 @@ export class RouteView {
 
   update(route: Card[]): void {
     const total = estimateTotalDuration(route);
-    const doneCount = this.done.size;
+    const doneCount = route.filter((c) => store.isCardDoneToday(c.id)).length;
 
     this.el.innerHTML = `
       <div class="route-header">
@@ -62,7 +61,7 @@ export class RouteView {
                     }
 
                     return `
-              <div class="route-step ${this.done.has(c.id) ? 'is-done' : ''}" data-id="${c.id}">
+              <div class="route-step ${store.isCardDoneToday(c.id) ? 'is-done' : ''}" data-id="${c.id}">
                 <div class="route-marker" style="background:var(--diff-${c.difficulty})">
                   <span>${idx + 1}</span>
                 </div>
@@ -77,7 +76,7 @@ export class RouteView {
                       ${planBadge}
                     </div>
                     <label class="route-check">
-                      <input type="checkbox" ${this.done.has(c.id) ? 'checked' : ''} />
+                      <input type="checkbox" ${store.isCardDoneToday(c.id) ? 'checked' : ''} />
                       <span>已练</span>
                     </label>
                   </div>
@@ -120,20 +119,12 @@ export class RouteView {
         const step = (e.target as HTMLElement).closest<HTMLElement>('.route-step');
         const id = step?.dataset.id;
         if (!id) return;
-        if (cb.checked) this.done.add(id);
-        else this.done.delete(id);
-        step?.classList.toggle('is-done', cb.checked);
-        this.updateProgress();
+        if (cb.checked) {
+          store.markCardDoneToday(id);
+        } else {
+          store.unmarkCardDoneToday(id);
+        }
       });
     });
-  }
-
-  private updateProgress(): void {
-    const total = this.el.querySelectorAll('.route-step').length;
-    const done = this.done.size;
-    const fill = this.el.querySelector<HTMLElement>('.progress-fill');
-    const text = this.el.querySelector<HTMLElement>('.progress-text');
-    if (fill) fill.style.width = total ? `${(done / total) * 100}%` : '0%';
-    if (text) text.textContent = `${done} / ${total}`;
   }
 }
