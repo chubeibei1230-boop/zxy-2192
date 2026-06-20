@@ -3,6 +3,7 @@ import type { ValidationAlert, AlertType } from '../types';
 const ALERT_META: Record<AlertType, { icon: string }> = {
   duplicate_number: { icon: '🆔' },
   duration_too_long: { icon: '⏰' },
+  total_duration_too_long: { icon: '📊' },
   mistakes_empty: { icon: '📝' },
   owner_overloaded: { icon: '👥' },
   starred_no_notes: { icon: '⭐' }

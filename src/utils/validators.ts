@@ -2,6 +2,7 @@ import type { Card, ValidationAlert } from '../types';
 
 const TOO_LONG_MINUTES = 180;
 const OWNER_OVERLOAD_THRESHOLD = 5;
+const TOTAL_TOO_LONG_MINUTES = 480;
 
 export function validateAll(cards: Card[]): ValidationAlert[] {
   const alerts: ValidationAlert[] = [];
@@ -11,6 +12,9 @@ export function validateAll(cards: Card[]): ValidationAlert[] {
 
   const longAlert = checkDurationTooLong(cards);
   if (longAlert) alerts.push(longAlert);
+
+  const totalAlert = checkTotalDurationTooLong(cards);
+  if (totalAlert) alerts.push(totalAlert);
 
   const emptyAlert = checkEmptyMistakes(cards);
   if (emptyAlert) alerts.push(emptyAlert);
@@ -109,6 +113,24 @@ function checkStarredNoNotes(cards: Card[]): ValidationAlert | null {
     type: 'starred_no_notes',
     severity: 'warning',
     message: `${ids.length} 张重点卡片缺少复盘提示`,
+    cardIds: ids
+  };
+}
+
+function checkTotalDurationTooLong(cards: Card[]): ValidationAlert | null {
+  const active = cards.filter(
+    (c) => c.status === 'pending' || c.status === 'in_progress'
+  );
+  const total = active.reduce((sum, c) => sum + (c.durationMin || 0), 0);
+  if (total <= TOTAL_TOO_LONG_MINUTES) return null;
+  const ids = active.map((c) => c.id);
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  const totalStr = mins > 0 ? `${hours}小时${mins}分钟` : `${hours}小时`;
+  return {
+    type: 'total_duration_too_long',
+    severity: 'warning',
+    message: `待办练习总时长 ${totalStr}，超过建议的 ${TOTAL_TOO_LONG_MINUTES / 60} 小时，建议分批安排`,
     cardIds: ids
   };
 }

@@ -60,7 +60,10 @@ export class Toolbar {
     const allSpecs = Array.from(new Set([...METAL_SPECS, ...collectMetalSpecs(cards)]));
     const routeBtnLabel = this.isRouteMode ? '📋 返回列表' : '🗺️ 练习路线';
     const routeBtnActive = this.isRouteMode ? ' active' : '';
-    const batchBarDisplay = this.selectedCount > 0 ? 'flex' : 'none';
+    const c = this.criteria;
+
+    const sel = (val: string | undefined, target: string) =>
+      val === target ? 'selected' : '';
 
     this.el.innerHTML = `
       <div class="toolbar-main">
@@ -84,8 +87,8 @@ export class Toolbar {
         <div class="filter-group">
           <label>金属规格</label>
           <select class="filter-select" data-filter="metalSpec">
-            <option value="">全部</option>
-            ${allSpecs.map((s) => `<option value="${s}">${s}</option>`).join('')}
+            <option value="" ${sel(c.metalSpec, '')}>全部</option>
+            ${allSpecs.map((s) => `<option value="${s}" ${sel(c.metalSpec, s)}>${s}</option>`).join('')}
           </select>
         </div>
         <div class="filter-group">
@@ -93,44 +96,51 @@ export class Toolbar {
           <select class="filter-select" data-filter="difficulty">
             <option value="">全部</option>
             ${([1, 2, 3, 4, 5] as const)
-              .map((d) => `<option value="${d}">${d} - ${DIFFICULTY_LABELS[d]}</option>`)
+              .map(
+                (d) =>
+                  `<option value="${d}" ${sel(c.difficulty !== undefined ? String(c.difficulty) : undefined, String(d))}>${d} - ${DIFFICULTY_LABELS[d]}</option>`
+              )
               .join('')}
           </select>
         </div>
         <div class="filter-group">
           <label>状态</label>
           <select class="filter-select" data-filter="status">
-            <option value="">全部</option>
+            <option value="" ${sel(c.status, '')}>全部</option>
             ${(Object.keys(STATUS_LABELS) as CardStatus[])
-              .map((s) => `<option value="${s}">${STATUS_LABELS[s]}</option>`)
+              .map((s) => `<option value="${s}" ${sel(c.status, s)}>${STATUS_LABELS[s]}</option>`)
               .join('')}
           </select>
         </div>
         <div class="filter-group">
           <label>责任人</label>
           <select class="filter-select" data-filter="owner">
-            <option value="">全部</option>
-            ${owners.map((o) => `<option value="${o}">${o}</option>`).join('')}
+            <option value="" ${sel(c.owner, '')}>全部</option>
+            ${owners.map((o) => `<option value="${o}" ${sel(c.owner, o)}>${o}</option>`).join('')}
           </select>
         </div>
         <div class="filter-group filter-duration">
           <label>时长范围(分钟)</label>
           <div class="duration-inputs">
-            <input type="number" min="0" class="filter-input" data-filter="minDuration" placeholder="最小" />
+            <input type="number" min="0" class="filter-input" data-filter="minDuration" placeholder="最小" value="${
+              c.minDuration !== undefined ? c.minDuration : ''
+            }" />
             <span>~</span>
-            <input type="number" min="0" class="filter-input" data-filter="maxDuration" placeholder="最大" />
+            <input type="number" min="0" class="filter-input" data-filter="maxDuration" placeholder="最大" value="${
+              c.maxDuration !== undefined ? c.maxDuration : ''
+            }" />
           </div>
         </div>
         <div class="filter-group">
           <label class="starred-toggle">
-            <input type="checkbox" data-filter="starredOnly" />
+            <input type="checkbox" data-filter="starredOnly" ${c.starredOnly ? 'checked' : ''} />
             <span>仅重点 ⭐</span>
           </label>
-        </div>${batchBarDisplay}
-        <button class="btn btn-small ${this.selectedCount}tn-reset" title="重置筛选">重置</button>
+        </div>
+        <button class="btn btn-small btn-reset" title="重置筛选">重置</button>
       </div>
-      <div class="batch-bar" style="display:none">
-        <span class="batch-count">已选 0 张</span>
+      <div class="batch-bar" style="display:${this.selectedCount > 0 ? 'flex' : 'none'}">
+        <span class="batch-count">已选 ${this.selectedCount} 张</span>
         <div class="batch-actions">
           <span>批量改状态：</span>
           ${(Object.keys(STATUS_LABELS) as CardStatus[])
@@ -196,12 +206,8 @@ export class Toolbar {
   }
 
   private resetFilters(): void {
-    this.el.querySelectorAll<HTMLSelectElement>('select[data-filter]').forEach((s) => (s.value = ''));
-    this.el.querySelectorAll<HTMLInputElement>('input[data-filter]').forEach((i) => {
-      if (i.type === 'checkbox') i.checked = false;
-      else i.value = '';
-    });
     this.criteria = {};
+    this.render();
     this.onChange(this.criteria);
   }
 

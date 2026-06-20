@@ -67,6 +67,7 @@ export interface FilterCriteria {
 export type AlertType =
   | 'duplicate_number'
   | 'duration_too_long'
+  | 'total_duration_too_long'
   | 'mistakes_empty'
   | 'owner_overloaded'
   | 'starred_no_notes';

@@ -43,6 +43,21 @@ export class CardGrid {
     }, 3000);
   }
 
+  private ensureEmptyState(): HTMLElement {
+    let empty = this.el.querySelector<HTMLElement>(':scope > .empty-state');
+    if (!empty) {
+      empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.innerHTML = `
+        <div class="empty-icon">📭</div>
+        <p>暂无练习卡片</p>
+        <p class="muted">点击右上角"新增卡片"开始创建</p>
+      `;
+      this.el.appendChild(empty);
+    }
+    return empty;
+  }
+
   update(cards: Card[]): void {
     const existing = new Set(this.items.keys());
     const current = new Set(cards.map((c) => c.id));
@@ -56,9 +71,9 @@ export class CardGrid {
     }
 
     for (const card of cards) {
-      const existing = this.items.get(card.id);
-      if (existing) {
-        existing.update(card);
+      const existingItem = this.items.get(card.id);
+      if (existingItem) {
+        existingItem.update(card);
       } else {
         const item = new CardItem(card, {
           onEdit: this.handlers.onEdit,
@@ -85,12 +100,7 @@ export class CardGrid {
       this.el.appendChild(item.getElement());
     }
 
-    if (cards.length === 0) {
-      this.el.innerHTML = `<div class="empty-state">
-        <div class="empty-icon">📭</div>
-        <p>暂无练习卡片</p>
-        <p class="muted">点击右上角"新增卡片"开始创建</p>
-      </div>`;
-    }
+    const emptyState = this.ensureEmptyState();
+    emptyState.style.display = cards.length === 0 ? 'block' : 'none';
   }
 }
