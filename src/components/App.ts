@@ -6,6 +6,7 @@ import { CardGrid } from './CardGrid';
 import { CardForm } from './CardForm';
 import { RouteView } from './RouteView';
 import { ReviewModal } from './ReviewModal';
+import { DailyPlanPanel } from './DailyPlanPanel';
 import { validateAll } from '../utils/validators';
 import { filterCards } from '../utils/filters';
 import { exportToCSV } from '../utils/csv';
@@ -19,9 +20,12 @@ export class App {
   private routeView: RouteView;
   private cardForm: CardForm;
   private reviewModal: ReviewModal;
+  private dailyPlanPanel: DailyPlanPanel;
+  private dailyPlanToggle: HTMLElement;
   private criteria: FilterCriteria = {};
   private isRouteMode = false;
   private editingId: string | null = null;
+  private isDailyPlanOpen = false;
   private unsubscribe: () => void;
 
   constructor(root: HTMLElement) {
@@ -33,7 +37,9 @@ export class App {
       () => this.openForm(),
       () => this.handleExport(),
       () => this.toggleRouteMode(),
-      (s) => this.handleBatchStatus(s)
+      (s) => this.handleBatchStatus(s),
+      () => this.toggleDailyPlan(),
+      () => this.handleAddSelectedToPlan()
     );
     this.alertPanel = new AlertPanel((ids) => this.handleLocate(ids));
     this.cardGrid = new CardGrid({
@@ -42,7 +48,8 @@ export class App {
       onDuplicate: (id) => store.duplicateCard(id),
       onToggleStar: (id) => store.toggleStar(id),
       onSelectionChange: () => this.handleSelectionChange(),
-      onReview: (id) => this.openReview(id)
+      onReview: (id) => this.openReview(id),
+      onAddToPlan: (id) => this.addCardToPlan(id)
     });
     this.routeView = new RouteView((id) => this.openForm(id));
     this.cardForm = new CardForm(
@@ -50,6 +57,13 @@ export class App {
       () => (this.editingId = null)
     );
     this.reviewModal = new ReviewModal();
+    this.dailyPlanPanel = new DailyPlanPanel(
+      (id) => this.openForm(id),
+      () => this.closeDailyPlan()
+    );
+    this.dailyPlanToggle = document.createElement('div');
+    this.dailyPlanToggle.className = 'daily-plan-toggle';
+    this.dailyPlanToggle.style.display = 'none';
 
     this.render();
     this.unsubscribe = store.subscribe(() => this.refresh());
@@ -65,9 +79,18 @@ export class App {
     main.appendChild(this.cardGrid.getElement());
     main.appendChild(this.routeView.getElement());
     this.root.appendChild(main);
+    this.root.appendChild(this.dailyPlanToggle);
     document.body.appendChild(this.cardForm.getElement());
     document.body.appendChild(this.reviewModal.getElement());
+    document.body.appendChild(this.dailyPlanPanel.getElement());
     this.updateViewMode();
+    this.bindToggleEvent();
+  }
+
+  private bindToggleEvent(): void {
+    this.dailyPlanToggle.addEventListener('click', () => {
+      this.toggleDailyPlan();
+    });
   }
 
   private refresh(): void {
@@ -88,6 +111,8 @@ export class App {
     this.toolbar.setRouteMode(this.isRouteMode);
     this.toolbar.setSelectedCount(this.cardGrid.getSelected().size);
     this.handleSelectionChange();
+    this.updateDailyPlanToggle();
+    this.dailyPlanPanel.refresh();
   }
 
   private handleFilterChange(c: FilterCriteria): void {
@@ -170,6 +195,75 @@ export class App {
     }
     this.cardForm.close();
     this.editingId = null;
+  }
+
+  private toggleDailyPlan(): void {
+    if (this.isDailyPlanOpen) {
+      this.closeDailyPlan();
+    } else {
+      this.openDailyPlan();
+    }
+  }
+
+  private openDailyPlan(): void {
+    this.isDailyPlanOpen = true;
+    this.dailyPlanPanel.open();
+    this.dailyPlanPanel.getElement().style.display = 'flex';
+  }
+
+  private closeDailyPlan(): void {
+    this.isDailyPlanOpen = false;
+    this.dailyPlanPanel.getElement().style.display = 'none';
+  }
+
+  private updateDailyPlanToggle(): void {
+    const plan = store.getTodayPlan();
+    if (plan) {
+      this.dailyPlanToggle.style.display = 'flex';
+      const completedCount = plan.items.filter((i) => i.status === 'completed').length;
+      const totalCount = plan.items.length;
+
+      let icon = '📋';
+      let text = '今日计划';
+      if (plan.status === 'in_progress') {
+        icon = '🔥';
+        text = '练习中';
+      } else if (plan.status === 'completed') {
+        icon = '🎉';
+        text = '已完成';
+      }
+
+      this.dailyPlanToggle.innerHTML = `
+        <span class="plan-toggle-icon">${icon}</span>
+        <span class="plan-toggle-text">${text}</span>
+        <span class="plan-toggle-badge">${completedCount}/${totalCount}</span>
+      `;
+    } else {
+      this.dailyPlanToggle.style.display = 'flex';
+      this.dailyPlanToggle.innerHTML = `
+        <span class="plan-toggle-icon">✨</span>
+        <span class="plan-toggle-text">今日计划</span>
+      `;
+    }
+  }
+
+  private addCardToPlan(cardId: string): void {
+    store.addCardsToTodayPlan([cardId]);
+    if (!this.isDailyPlanOpen) {
+      this.openDailyPlan();
+    }
+  }
+
+  private handleAddSelectedToPlan(): void {
+    const ids = Array.from(this.cardGrid.getSelected());
+    if (ids.length === 0) {
+      alert('请先选择要添加的卡片');
+      return;
+    }
+    store.addCardsToTodayPlan(ids);
+    if (!this.isDailyPlanOpen) {
+      this.openDailyPlan();
+    }
   }
 
   destroy(): void {

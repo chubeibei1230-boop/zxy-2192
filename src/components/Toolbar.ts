@@ -10,6 +10,8 @@ export class Toolbar {
   private onExport: () => void;
   private onToggleRoute: () => void;
   private onBatchStatus: (status: CardStatus) => void;
+  private onToggleDailyPlan: () => void;
+  private onAddSelectedToPlan: () => void;
   private criteria: FilterCriteria = {};
   private isRouteMode = false;
   private selectedCount = 0;
@@ -19,13 +21,17 @@ export class Toolbar {
     onAdd: () => void,
     onExport: () => void,
     onToggleRoute: () => void,
-    onBatchStatus: (s: CardStatus) => void
+    onBatchStatus: (s: CardStatus) => void,
+    onToggleDailyPlan: () => void,
+    onAddSelectedToPlan: () => void
   ) {
     this.onChange = onChange;
     this.onAdd = onAdd;
     this.onExport = onExport;
     this.onToggleRoute = onToggleRoute;
     this.onBatchStatus = onBatchStatus;
+    this.onToggleDailyPlan = onToggleDailyPlan;
+    this.onAddSelectedToPlan = onAddSelectedToPlan;
     this.el = document.createElement('header');
     this.el.className = 'toolbar';
     this.render();
@@ -72,6 +78,9 @@ export class Toolbar {
           <h1 class="brand-title">金工錾刻练习卡</h1>
         </div>
         <div class="toolbar-actions">
+          <button class="btn btn-ghost btn-daily-plan" title="今日练习计划">
+            📋 今日计划
+          </button>
           <button class="btn btn-ghost btn-route${routeBtnActive}" title="按难度生成练习路线">
             ${routeBtnLabel}
           </button>
@@ -193,7 +202,8 @@ export class Toolbar {
       <div class="batch-bar" style="display:${this.selectedCount > 0 ? 'flex' : 'none'}">
         <span class="batch-count">已选 ${this.selectedCount} 张</span>
         <div class="batch-actions">
-          <span>批量改状态：</span>
+          <span>批量操作：</span>
+          <button class="btn btn-tiny batch-add-plan">📋 加入今日计划</button>
           ${(Object.keys(STATUS_LABELS) as CardStatus[])
             .map(
               (s) =>
@@ -211,7 +221,9 @@ export class Toolbar {
     this.el.querySelector('.btn-add')?.addEventListener('click', () => this.onAdd());
     this.el.querySelector('.btn-export')?.addEventListener('click', () => this.onExport());
     this.el.querySelector('.btn-route')?.addEventListener('click', () => this.onToggleRoute());
+    this.el.querySelector('.btn-daily-plan')?.addEventListener('click', () => this.onToggleDailyPlan());
     this.el.querySelector('.btn-reset')?.addEventListener('click', () => this.resetFilters());
+    this.el.querySelector('.batch-add-plan')?.addEventListener('click', () => this.onAddSelectedToPlan());
 
     this.el.querySelectorAll<HTMLSelectElement>('select[data-filter]').forEach((sel) => {
       sel.addEventListener('change', () => this.updateFilterFromDom());

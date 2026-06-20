@@ -47,6 +47,20 @@ export class RouteView {
                 .map(
                   (c, idx) => {
                     const stats = store.getCardReviewStats(c.id);
+                    const inPlan = store.isCardInTodayPlan(c.id);
+                    const planStatus = store.getTodayPlanItemStatus(c.id);
+
+                    let planBadge = '';
+                    if (inPlan && planStatus) {
+                      const statusLabels: Record<string, string> = {
+                        pending: '待练',
+                        in_progress: '进行中',
+                        completed: '已完成',
+                        skipped: '已跳过'
+                      };
+                      planBadge = `<span class="route-plan-badge plan-status-${planStatus}">📋 ${statusLabels[planStatus]}</span>`;
+                    }
+
                     return `
               <div class="route-step ${this.done.has(c.id) ? 'is-done' : ''}" data-id="${c.id}">
                 <div class="route-marker" style="background:var(--diff-${c.difficulty})">
@@ -60,6 +74,7 @@ export class RouteView {
                       <span class="diff-tag diff-${c.difficulty}">${DIFFICULTY_LABELS[c.difficulty]}</span>
                       <span class="card-badge" style="background:${STATUS_COLORS[c.status]}">${STATUS_LABELS[c.status]}</span>
                       ${stats.isStable ? '<span class="route-stable-badge">✅ 稳定</span>' : ''}
+                      ${planBadge}
                     </div>
                     <label class="route-check">
                       <input type="checkbox" ${this.done.has(c.id) ? 'checked' : ''} />

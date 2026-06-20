@@ -14,6 +14,7 @@ export class CardItem {
   private onToggleStar: (id: string) => void;
   private onToggleSelect: (id: string, selected: boolean) => void;
   private onReview: (id: string) => void;
+  private onAddToPlan: (id: string) => void;
 
   constructor(
     card: Card,
@@ -24,6 +25,7 @@ export class CardItem {
       onToggleStar: (id: string) => void;
       onToggleSelect: (id: string, selected: boolean) => void;
       onReview: (id: string) => void;
+      onAddToPlan: (id: string) => void;
     }
   ) {
     this.card = card;
@@ -33,6 +35,7 @@ export class CardItem {
     this.onToggleStar = handlers.onToggleStar;
     this.onToggleSelect = handlers.onToggleSelect;
     this.onReview = handlers.onReview;
+    this.onAddToPlan = handlers.onAddToPlan;
     this.el = document.createElement('article');
     this.el.className = 'card-item';
     this.render();
@@ -73,6 +76,19 @@ export class CardItem {
     const diffWidth = (c.difficulty / 5) * 100;
     const stepsPreview = c.steps.split('\n')[0].slice(0, 40);
     const stats = store.getCardReviewStats(c.id);
+    const inPlan = store.isCardInTodayPlan(c.id);
+    const planStatus = store.getTodayPlanItemStatus(c.id);
+
+    let planBadge = '';
+    if (inPlan && planStatus) {
+      const statusLabels: Record<string, string> = {
+        pending: '待练',
+        in_progress: '进行中',
+        completed: '已完成',
+        skipped: '已跳过'
+      };
+      planBadge = `<span class="plan-status-badge plan-status-${planStatus}">📋 ${statusLabels[planStatus]}</span>`;
+    }
 
     this.el.innerHTML = `
       <div class="card-header" style="border-left:4px solid ${STATUS_COLORS[c.status]}">
@@ -84,6 +100,7 @@ export class CardItem {
           <span class="card-spec">${c.metalSpec}</span>
         </div>
         ${stats.isStable ? '<span class="stable-badge" title="已形成稳定练习成果">✅ 稳定</span>' : ''}
+        ${planBadge}
         <button class="btn-icon card-star" title="${c.starred ? '取消收藏' : '重点收藏'}">
           ${c.starred ? '⭐' : '☆'}
         </button>
@@ -108,6 +125,9 @@ export class CardItem {
       </div>
       <div class="card-actions">
         <button class="btn btn-small card-review-btn">📝 复盘</button>
+        <button class="btn btn-small card-add-plan" ${inPlan ? 'disabled' : ''}>
+          ${inPlan ? '✓ 已在计划' : '📋 加入计划'}
+        </button>
         <button class="btn btn-small card-edit">编辑</button>
         <button class="btn btn-small card-dup">复制</button>
         <button class="btn btn-small btn-danger card-del">删除</button>
@@ -127,6 +147,12 @@ export class CardItem {
     this.el.querySelector('.card-review-btn')?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.onReview(c.id);
+    });
+    this.el.querySelector('.card-add-plan')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!inPlan) {
+        this.onAddToPlan(c.id);
+      }
     });
     this.el.querySelector('.card-edit')?.addEventListener('click', () => this.onEdit(c.id));
     this.el.querySelector('.card-dup')?.addEventListener('click', () => this.onDuplicate(c.id));

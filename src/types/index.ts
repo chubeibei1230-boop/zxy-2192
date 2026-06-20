@@ -121,3 +121,39 @@ export interface ValidationAlert {
   message: string;
   cardIds: string[];
 }
+
+export type DailyPlanStatus = 'planning' | 'in_progress' | 'completed';
+
+export type DailyPlanItemStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
+
+export interface DailyPlanItem {
+  cardId: string;
+  order: number;
+  status: DailyPlanItemStatus;
+  actualDurationMin?: number;
+  completedAt?: string;
+  note?: string;
+}
+
+export interface DailyPlanSummary {
+  totalCount: number;
+  completedCount: number;
+  skippedCount: number;
+  pendingCount: number;
+  totalDurationMin: number;
+  followUpCardIds: string[];
+  summaryText: string;
+}
+
+export interface DailyPlan {
+  id: string;
+  date: string;
+  goal: string;
+  items: DailyPlanItem[];
+  status: DailyPlanStatus;
+  startedAt?: string;
+  endedAt?: string;
+  summary?: DailyPlanSummary;
+  createdAt: string;
+  updatedAt: string;
+}

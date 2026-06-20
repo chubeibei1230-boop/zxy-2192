@@ -12,6 +12,7 @@ export class CardGrid {
     onToggleStar: (id: string) => void;
     onSelectionChange: (ids: Set<string>) => void;
     onReview: (id: string) => void;
+    onAddToPlan: (id: string) => void;
   };
 
   constructor(handlers: CardGrid['handlers']) {
@@ -82,6 +83,7 @@ export class CardGrid {
           onDuplicate: this.handlers.onDuplicate,
           onToggleStar: this.handlers.onToggleStar,
           onReview: this.handlers.onReview,
+          onAddToPlan: this.handlers.onAddToPlan,
           onToggleSelect: (id, selected) => {
             if (selected) this.selected.add(id);
             else this.selected.delete(id);

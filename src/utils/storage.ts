@@ -1,7 +1,8 @@
-import type { Card, PracticeRecord } from '../types';
+import type { Card, PracticeRecord, DailyPlan } from '../types';
 
 const STORAGE_KEY = 'chasing-practice-cards';
 const RECORDS_KEY = 'chasing-practice-records';
+const DAILY_PLAN_KEY = 'chasing-daily-plan';
 
 export function loadCards(): Card[] {
   try {
@@ -33,6 +34,22 @@ export function loadRecords(): PracticeRecord[] {
 
 export function saveRecords(records: PracticeRecord[]): void {
   localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+}
+
+export function loadDailyPlans(): DailyPlan[] {
+  try {
+    const raw = localStorage.getItem(DAILY_PLAN_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as DailyPlan[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
+export function saveDailyPlans(plans: DailyPlan[]): void {
+  localStorage.setItem(DAILY_PLAN_KEY, JSON.stringify(plans));
 }
 
 function seedData(): Card[] {
