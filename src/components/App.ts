@@ -7,6 +7,7 @@ import { CardForm } from './CardForm';
 import { RouteView } from './RouteView';
 import { ReviewModal } from './ReviewModal';
 import { DailyPlanPanel } from './DailyPlanPanel';
+import { TrainingReportPanel } from './TrainingReportPanel';
 import { validateAll } from '../utils/validators';
 import { filterCards } from '../utils/filters';
 import { exportToCSV } from '../utils/csv';
@@ -21,11 +22,13 @@ export class App {
   private cardForm: CardForm;
   private reviewModal: ReviewModal;
   private dailyPlanPanel: DailyPlanPanel;
+  private trainingReportPanel: TrainingReportPanel;
   private dailyPlanToggle: HTMLElement;
   private criteria: FilterCriteria = {};
   private isRouteMode = false;
   private editingId: string | null = null;
   private isDailyPlanOpen = false;
+  private isTrainingReportOpen = false;
   private unsubscribe: () => void;
 
   constructor(root: HTMLElement) {
@@ -39,7 +42,8 @@ export class App {
       () => this.toggleRouteMode(),
       (s) => this.handleBatchStatus(s),
       () => this.toggleDailyPlan(),
-      () => this.handleAddSelectedToPlan()
+      () => this.handleAddSelectedToPlan(),
+      () => this.toggleTrainingReport()
     );
     this.alertPanel = new AlertPanel((ids) => this.handleLocate(ids));
     this.cardGrid = new CardGrid({
@@ -60,6 +64,10 @@ export class App {
     this.dailyPlanPanel = new DailyPlanPanel(
       (id) => this.openForm(id),
       () => this.closeDailyPlan()
+    );
+    this.trainingReportPanel = new TrainingReportPanel(
+      (id) => this.openForm(id),
+      () => this.closeTrainingReport()
     );
     this.dailyPlanToggle = document.createElement('div');
     this.dailyPlanToggle.className = 'daily-plan-toggle';
@@ -83,6 +91,7 @@ export class App {
     document.body.appendChild(this.cardForm.getElement());
     document.body.appendChild(this.reviewModal.getElement());
     document.body.appendChild(this.dailyPlanPanel.getElement());
+    document.body.appendChild(this.trainingReportPanel.getElement());
     this.updateViewMode();
     this.bindToggleEvent();
   }
@@ -113,6 +122,7 @@ export class App {
     this.handleSelectionChange();
     this.updateDailyPlanToggle();
     this.dailyPlanPanel.refresh();
+    this.trainingReportPanel.refresh();
   }
 
   private handleFilterChange(c: FilterCriteria): void {
@@ -214,6 +224,23 @@ export class App {
   private closeDailyPlan(): void {
     this.isDailyPlanOpen = false;
     this.dailyPlanPanel.getElement().style.display = 'none';
+  }
+
+  private toggleTrainingReport(): void {
+    if (this.isTrainingReportOpen) {
+      this.closeTrainingReport();
+    } else {
+      this.openTrainingReport();
+    }
+  }
+
+  private openTrainingReport(): void {
+    this.isTrainingReportOpen = true;
+    this.trainingReportPanel.open();
+  }
+
+  private closeTrainingReport(): void {
+    this.isTrainingReportOpen = false;
   }
 
   private updateDailyPlanToggle(): void {

@@ -157,3 +157,72 @@ export interface DailyPlan {
   createdAt: string;
   updatedAt: string;
 }
+
+export type ReportDateRange = '7days' | '30days' | 'custom';
+
+export interface ReportDateRangeConfig {
+  type: ReportDateRange;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface ReportSummaryStats {
+  totalPracticeCount: number;
+  totalDurationMin: number;
+  completionRate: number;
+  stableCardCount: number;
+  needFollowUpCardCount: number;
+}
+
+export interface DifficultyStat {
+  difficulty: 1 | 2 | 3 | 4 | 5;
+  count: number;
+  practiceCount: number;
+  completionRate: number;
+}
+
+export interface StatusStat {
+  status: CardStatus;
+  count: number;
+}
+
+export interface OwnerStat {
+  owner: string;
+  count: number;
+  practiceCount: number;
+  completedCount: number;
+}
+
+export interface FrequentMistake {
+  description: string;
+  count: number;
+  cardIds: string[];
+}
+
+export interface UnstableUnpracticedCard {
+  cardId: string;
+  patternNumber: string;
+  difficulty: 1 | 2 | 3 | 4 | 5;
+  daysSinceLastPractice: number;
+  practiceCount: number;
+  completedCount: number;
+}
+
+export interface DailyPlanCompletion {
+  date: string;
+  totalCount: number;
+  completedCount: number;
+  completionRate: number;
+  totalDurationMin: number;
+}
+
+export interface TrainingReport {
+  dateRange: ReportDateRangeConfig;
+  summary: ReportSummaryStats;
+  difficultyStats: DifficultyStat[];
+  statusStats: StatusStat[];
+  ownerStats: OwnerStat[];
+  frequentMistakes: FrequentMistake[];
+  unstableUnpracticedCards: UnstableUnpracticedCard[];
+  dailyPlanCompletions: DailyPlanCompletion[];
+}

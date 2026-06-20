@@ -12,6 +12,7 @@ export class Toolbar {
   private onBatchStatus: (status: CardStatus) => void;
   private onToggleDailyPlan: () => void;
   private onAddSelectedToPlan: () => void;
+  private onToggleTrainingReport: () => void;
   private criteria: FilterCriteria = {};
   private isRouteMode = false;
   private selectedCount = 0;
@@ -23,7 +24,8 @@ export class Toolbar {
     onToggleRoute: () => void,
     onBatchStatus: (s: CardStatus) => void,
     onToggleDailyPlan: () => void,
-    onAddSelectedToPlan: () => void
+    onAddSelectedToPlan: () => void,
+    onToggleTrainingReport: () => void
   ) {
     this.onChange = onChange;
     this.onAdd = onAdd;
@@ -32,6 +34,7 @@ export class Toolbar {
     this.onBatchStatus = onBatchStatus;
     this.onToggleDailyPlan = onToggleDailyPlan;
     this.onAddSelectedToPlan = onAddSelectedToPlan;
+    this.onToggleTrainingReport = onToggleTrainingReport;
     this.el = document.createElement('header');
     this.el.className = 'toolbar';
     this.render();
@@ -78,6 +81,9 @@ export class Toolbar {
           <h1 class="brand-title">金工錾刻练习卡</h1>
         </div>
         <div class="toolbar-actions">
+          <button class="btn btn-ghost btn-training-report" title="阶段训练报告">
+            📊 训练报告
+          </button>
           <button class="btn btn-ghost btn-daily-plan" title="今日练习计划">
             📋 今日计划
           </button>
@@ -222,6 +228,7 @@ export class Toolbar {
     this.el.querySelector('.btn-export')?.addEventListener('click', () => this.onExport());
     this.el.querySelector('.btn-route')?.addEventListener('click', () => this.onToggleRoute());
     this.el.querySelector('.btn-daily-plan')?.addEventListener('click', () => this.onToggleDailyPlan());
+    this.el.querySelector('.btn-training-report')?.addEventListener('click', () => this.onToggleTrainingReport());
     this.el.querySelector('.btn-reset')?.addEventListener('click', () => this.resetFilters());
     this.el.querySelector('.batch-add-plan')?.addEventListener('click', () => this.onAddSelectedToPlan());
 

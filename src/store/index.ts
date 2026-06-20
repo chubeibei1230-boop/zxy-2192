@@ -5,7 +5,16 @@ import type {
   CardReviewStats,
   DailyPlan,
   DailyPlanItem,
-  DailyPlanSummary
+  DailyPlanSummary,
+  TrainingReport,
+  ReportDateRangeConfig,
+  ReportSummaryStats,
+  DifficultyStat,
+  StatusStat,
+  OwnerStat,
+  FrequentMistake,
+  UnstableUnpracticedCard,
+  DailyPlanCompletion
 } from '../types';
 import { STABILITY_THRESHOLD } from '../types';
 import {
@@ -539,6 +548,289 @@ class Store {
       )[0];
       this.deleteRecord(latestRecord.id);
     }
+  }
+
+  getTrainingReport(dateRange: ReportDateRangeConfig): TrainingReport {
+    const { startDate, endDate } = this.resolveDateRange(dateRange);
+
+    const recordsInRange = this.records.filter((r) => r.date >= startDate && r.date <= endDate);
+    const plansInRange = this.dailyPlans.filter((p) => p.date >= startDate && p.date <= endDate);
+    const cardIdsInRange = new Set(recordsInRange.map((r) => r.cardId));
+    const cardsInvolved = this.cards.filter((c) => cardIdsInRange.has(c.id));
+
+    const summary = this.calculateSummaryStats(recordsInRange, cardsInvolved);
+    const difficultyStats = this.calculateDifficultyStats(recordsInRange, cardsInvolved);
+    const statusStats = this.calculateStatusStats(cardsInvolved);
+    const ownerStats = this.calculateOwnerStats(recordsInRange, cardsInvolved);
+    const frequentMistakes = this.calculateFrequentMistakes(recordsInRange);
+    const unstableUnpracticedCards = this.calculateUnstableUnpracticedCards();
+    const dailyPlanCompletions = this.calculateDailyPlanCompletions(plansInRange, startDate, endDate);
+
+    return {
+      dateRange,
+      summary,
+      difficultyStats,
+      statusStats,
+      ownerStats,
+      frequentMistakes,
+      unstableUnpracticedCards,
+      dailyPlanCompletions
+    };
+  }
+
+  private resolveDateRange(config: ReportDateRangeConfig): { startDate: string; endDate: string } {
+    const today = new Date();
+    const endDate = today.toISOString().slice(0, 10);
+
+    let startDate: string;
+    if (config.type === '7days') {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 6);
+      startDate = d.toISOString().slice(0, 10);
+    } else if (config.type === '30days') {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 29);
+      startDate = d.toISOString().slice(0, 10);
+    } else {
+      startDate = config.startDate || endDate;
+    }
+
+    return { startDate, endDate: config.endDate || endDate };
+  }
+
+  private calculateSummaryStats(
+    records: PracticeRecord[],
+    cards: Card[]
+  ): ReportSummaryStats {
+    const totalPracticeCount = records.length;
+    const totalDurationMin = records.reduce((sum, r) => sum + r.durationMin, 0);
+    const completedRecords = records.filter((r) => r.result === 'completed');
+    const completionRate = records.length > 0
+      ? Math.round((completedRecords.length / records.length) * 100)
+      : 0;
+
+    let stableCardCount = 0;
+    let needFollowUpCardCount = 0;
+    for (const card of cards) {
+      const stats = this.getCardReviewStats(card.id);
+      if (stats.isStable) {
+        stableCardCount++;
+      }
+      if (card.status === 'need_help' || (stats.practiceCount > 0 && !stats.isStable && stats.completedCount < stats.practiceCount * 0.5)) {
+        needFollowUpCardCount++;
+      }
+    }
+
+    return {
+      totalPracticeCount,
+      totalDurationMin,
+      completionRate,
+      stableCardCount,
+      needFollowUpCardCount
+    };
+  }
+
+  private calculateDifficultyStats(
+    records: PracticeRecord[],
+    cards: Card[]
+  ): DifficultyStat[] {
+    const difficultyMap = new Map<number, { count: number; practiceCount: number; completedCount: number }>();
+
+    for (let d = 1; d <= 5; d++) {
+      difficultyMap.set(d, { count: 0, practiceCount: 0, completedCount: 0 });
+    }
+
+    for (const card of cards) {
+      const data = difficultyMap.get(card.difficulty)!;
+      data.count++;
+    }
+
+    for (const record of records) {
+      const card = this.cards.find((c) => c.id === record.cardId);
+      if (card) {
+        const data = difficultyMap.get(card.difficulty)!;
+        data.practiceCount++;
+        if (record.result === 'completed') {
+          data.completedCount++;
+        }
+      }
+    }
+
+    const result: DifficultyStat[] = [];
+    for (let d = 1; d <= 5; d++) {
+      const data = difficultyMap.get(d)!;
+      result.push({
+        difficulty: d as 1 | 2 | 3 | 4 | 5,
+        count: data.count,
+        practiceCount: data.practiceCount,
+        completionRate: data.practiceCount > 0
+          ? Math.round((data.completedCount / data.practiceCount) * 100)
+          : 0
+      });
+    }
+
+    return result;
+  }
+
+  private calculateStatusStats(cards: Card[]): StatusStat[] {
+    const statusOrder: CardStatus[] = ['pending', 'in_progress', 'need_help', 'showcase', 'postponed'];
+    const result: StatusStat[] = [];
+
+    for (const status of statusOrder) {
+      const count = cards.filter((c) => c.status === status).length;
+      result.push({ status, count });
+    }
+
+    return result;
+  }
+
+  private calculateOwnerStats(
+    records: PracticeRecord[],
+    cards: Card[]
+  ): OwnerStat[] {
+    const ownerMap = new Map<string, { count: number; practiceCount: number; completedCount: number }>();
+
+    for (const card of cards) {
+      const owner = card.owner || '未分配';
+      if (!ownerMap.has(owner)) {
+        ownerMap.set(owner, { count: 0, practiceCount: 0, completedCount: 0 });
+      }
+      ownerMap.get(owner)!.count++;
+    }
+
+    for (const record of records) {
+      const card = this.cards.find((c) => c.id === record.cardId);
+      if (card) {
+        const owner = card.owner || '未分配';
+        if (!ownerMap.has(owner)) {
+          ownerMap.set(owner, { count: 0, practiceCount: 0, completedCount: 0 });
+        }
+        const data = ownerMap.get(owner)!;
+        data.practiceCount++;
+        if (record.result === 'completed') {
+          data.completedCount++;
+        }
+      }
+    }
+
+    const result: OwnerStat[] = [];
+    for (const [owner, data] of ownerMap.entries()) {
+      result.push({
+        owner,
+        count: data.count,
+        practiceCount: data.practiceCount,
+        completedCount: data.completedCount
+      });
+    }
+
+    result.sort((a, b) => b.practiceCount - a.practiceCount);
+    return result;
+  }
+
+  private calculateFrequentMistakes(records: PracticeRecord[]): FrequentMistake[] {
+    const mistakeMap = new Map<string, { count: number; cardIds: Set<string> }>();
+
+    for (const record of records) {
+      if (!record.problems || record.problems.trim() === '') continue;
+
+      const mistakes = record.problems.split(/[,，、；;\n]+/).map((m) => m.trim()).filter((m) => m.length > 0);
+
+      for (const mistake of mistakes) {
+        if (!mistakeMap.has(mistake)) {
+          mistakeMap.set(mistake, { count: 0, cardIds: new Set() });
+        }
+        const data = mistakeMap.get(mistake)!;
+        data.count++;
+        data.cardIds.add(record.cardId);
+      }
+    }
+
+    const result: FrequentMistake[] = [];
+    for (const [description, data] of mistakeMap.entries()) {
+      result.push({
+        description,
+        count: data.count,
+        cardIds: Array.from(data.cardIds)
+      });
+    }
+
+    result.sort((a, b) => b.count - a.count);
+    return result.slice(0, 10);
+  }
+
+  private calculateUnstableUnpracticedCards(): UnstableUnpracticedCard[] {
+    const result: UnstableUnpracticedCard[] = [];
+
+    for (const card of this.cards) {
+      const stats = this.getCardReviewStats(card.id);
+      if (stats.isStable) continue;
+
+      const daysSinceLast = daysSince(stats.lastPracticeDate);
+      if (daysSinceLast < 7) continue;
+
+      if (stats.practiceCount === 0) continue;
+
+      result.push({
+        cardId: card.id,
+        patternNumber: card.patternNumber,
+        difficulty: card.difficulty,
+        daysSinceLastPractice: daysSinceLast,
+        practiceCount: stats.practiceCount,
+        completedCount: stats.completedCount
+      });
+    }
+
+    result.sort((a, b) => b.daysSinceLastPractice - a.daysSinceLastPractice);
+    return result.slice(0, 10);
+  }
+
+  private calculateDailyPlanCompletions(
+    plans: DailyPlan[],
+    startDate: string,
+    endDate: string
+  ): DailyPlanCompletion[] {
+    const result: DailyPlanCompletion[] = [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const planMap = new Map<string, DailyPlan>();
+    for (const plan of plans) {
+      planMap.set(plan.date, plan);
+    }
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().slice(0, 10);
+      const plan = planMap.get(dateStr);
+
+      if (plan && plan.summary) {
+        result.push({
+          date: dateStr,
+          totalCount: plan.summary.totalCount,
+          completedCount: plan.summary.completedCount,
+          completionRate: plan.summary.totalCount > 0
+            ? Math.round((plan.summary.completedCount / plan.summary.totalCount) * 100)
+            : 0,
+          totalDurationMin: plan.summary.totalDurationMin
+        });
+      } else if (plan && plan.items.length > 0) {
+        const completedCount = plan.items.filter((i) => i.status === 'completed').length;
+        const totalDuration = plan.items
+          .filter((i) => i.status === 'completed')
+          .reduce((sum, i) => sum + (i.actualDurationMin || 0), 0);
+
+        result.push({
+          date: dateStr,
+          totalCount: plan.items.length,
+          completedCount,
+          completionRate: plan.items.length > 0
+            ? Math.round((completedCount / plan.items.length) * 100)
+            : 0,
+          totalDurationMin: totalDuration
+        });
+      }
+    }
+
+    return result;
   }
 }
 
