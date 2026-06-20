@@ -137,6 +137,23 @@ export class Toolbar {
             <span>仅重点 ⭐</span>
           </label>
         </div>
+        <div class="filter-group">
+          <label>排序方式</label>
+          <select class="filter-select" data-filter="sortBy">
+            <option value="default" ${sel(c.sortBy, 'default')}>默认</option>
+            <option value="lastPracticeDate" ${sel(c.sortBy, 'lastPracticeDate')}>最近练习</option>
+            <option value="practiceCount" ${sel(c.sortBy, 'practiceCount')}>练习次数</option>
+            <option value="isStable" ${sel(c.sortBy, 'isStable')}>是否稳定</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>稳定状态</label>
+          <select class="filter-select" data-filter="stableFilter">
+            <option value="all" ${sel(c.stableFilter, 'all') || (!c.stableFilter ? 'selected' : '')}>全部</option>
+            <option value="stable" ${sel(c.stableFilter, 'stable')}>已稳定 ✅</option>
+            <option value="unstable" ${sel(c.stableFilter, 'unstable')}>未稳定</option>
+          </select>
+        </div>
         <button class="btn btn-small btn-reset" title="重置筛选">重置</button>
       </div>
       <div class="batch-bar" style="display:${this.selectedCount > 0 ? 'flex' : 'none'}">
@@ -192,6 +209,8 @@ export class Toolbar {
     const maxDurationRaw = get<HTMLInputElement>('maxDuration')?.value;
     const maxDuration = maxDurationRaw ? Number(maxDurationRaw) : undefined;
     const starredOnly = get<HTMLInputElement>('starredOnly')?.checked || undefined;
+    const sortBy = (get<HTMLSelectElement>('sortBy')?.value as FilterCriteria['sortBy']) || 'default';
+    const stableFilter = (get<HTMLSelectElement>('stableFilter')?.value as FilterCriteria['stableFilter']) || 'all';
 
     this.criteria = {
       metalSpec,
@@ -200,7 +219,9 @@ export class Toolbar {
       owner,
       minDuration,
       maxDuration,
-      starredOnly
+      starredOnly,
+      sortBy,
+      stableFilter
     };
     this.onChange(this.criteria);
   }

@@ -5,6 +5,7 @@ import {
   DIFFICULTY_LABELS
 } from '../types';
 import { formatDuration, estimateTotalDuration } from '../utils/router';
+import { store } from '../store';
 
 export class RouteView {
   private el: HTMLElement;
@@ -44,7 +45,9 @@ export class RouteView {
             ? `<div class="empty-state"><div class="empty-icon">📋</div><p>暂无可安排的练习卡片</p></div>`
             : route
                 .map(
-                  (c, idx) => `
+                  (c, idx) => {
+                    const stats = store.getCardReviewStats(c.id);
+                    return `
               <div class="route-step ${this.done.has(c.id) ? 'is-done' : ''}" data-id="${c.id}">
                 <div class="route-marker" style="background:var(--diff-${c.difficulty})">
                   <span>${idx + 1}</span>
@@ -56,6 +59,7 @@ export class RouteView {
                       <span class="card-number">${c.patternNumber}</span>
                       <span class="diff-tag diff-${c.difficulty}">${DIFFICULTY_LABELS[c.difficulty]}</span>
                       <span class="card-badge" style="background:${STATUS_COLORS[c.status]}">${STATUS_LABELS[c.status]}</span>
+                      ${stats.isStable ? '<span class="route-stable-badge">✅ 稳定</span>' : ''}
                     </div>
                     <label class="route-check">
                       <input type="checkbox" ${this.done.has(c.id) ? 'checked' : ''} />
@@ -68,13 +72,15 @@ export class RouteView {
                       <span>⏱ ${formatDuration(c.durationMin)}</span>
                       <span>👤 ${c.owner || '未分配'}</span>
                       ${c.starred ? '<span>⭐ 重点</span>' : ''}
+                      ${stats.practiceCount > 0 ? `<span>📝 ${stats.practiceCount}次</span>` : ''}
                     </div>
                     ${c.steps ? `<p class="route-steps">${c.steps.split('\n').slice(0, 2).join(' / ')}</p>` : ''}
                     ${c.mistakes ? `<div class="route-mistakes">⚠ ${c.mistakes}</div>` : ''}
                   </div>
                 </div>
               </div>
-            `
+            `;
+                  }
                 )
                 .join('')
         }

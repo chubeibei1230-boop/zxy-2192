@@ -1,4 +1,6 @@
 import type { Card, ValidationAlert } from '../types';
+import { STABILITY_THRESHOLD } from '../types';
+import { store } from '../store';
 
 const TOO_LONG_MINUTES = 180;
 const OWNER_OVERLOAD_THRESHOLD = 5;
@@ -24,6 +26,9 @@ export function validateAll(cards: Card[]): ValidationAlert[] {
 
   const starredAlert = checkStarredNoNotes(cards);
   if (starredAlert) alerts.push(starredAlert);
+
+  const stableAlert = checkStableAchieved(cards);
+  if (stableAlert) alerts.push(stableAlert);
 
   return alerts;
 }
@@ -131,6 +136,19 @@ function checkTotalDurationTooLong(cards: Card[]): ValidationAlert | null {
     type: 'total_duration_too_long',
     severity: 'warning',
     message: `待办练习总时长 ${totalStr}，超过建议的 ${TOTAL_TOO_LONG_MINUTES / 60} 小时，建议分批安排`,
+    cardIds: ids
+  };
+}
+
+function checkStableAchieved(cards: Card[]): ValidationAlert | null {
+  const ids = cards
+    .filter((c) => store.getCardReviewStats(c.id).isStable)
+    .map((c) => c.id);
+  if (ids.length === 0) return null;
+  return {
+    type: 'stable_achieved',
+    severity: 'warning',
+    message: `${ids.length} 张卡片已形成稳定练习成果（累计完成 ≥ ${STABILITY_THRESHOLD} 次），可重点关注新练习`,
     cardIds: ids
   };
 }

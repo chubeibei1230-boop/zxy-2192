@@ -1,14 +1,17 @@
-import type { Card, CardStatus } from '../types';
-import { loadCards, saveCards, generateId } from '../utils/storage';
+import type { Card, CardStatus, PracticeRecord, CardReviewStats } from '../types';
+import { STABILITY_THRESHOLD } from '../types';
+import { loadCards, saveCards, loadRecords, saveRecords, generateId } from '../utils/storage';
 
 type Listener = () => void;
 
 class Store {
   private cards: Card[] = [];
+  private records: PracticeRecord[] = [];
   private listeners: Set<Listener> = new Set();
 
   constructor() {
     this.cards = loadCards();
+    this.records = loadRecords();
   }
 
   subscribe(listener: Listener): () => void {
@@ -18,6 +21,7 @@ class Store {
 
   private notify(): void {
     saveCards(this.cards);
+    saveRecords(this.records);
     for (const l of this.listeners) l();
   }
 
@@ -54,6 +58,7 @@ class Store {
 
   deleteCard(id: string): void {
     this.cards = this.cards.filter((c) => c.id !== id);
+    this.records = this.records.filter((r) => r.cardId !== id);
     this.notify();
   }
 
@@ -93,6 +98,55 @@ class Store {
       updatedAt: new Date().toISOString()
     };
     this.notify();
+  }
+
+  getRecords(cardId?: string): PracticeRecord[] {
+    if (cardId) return this.records.filter((r) => r.cardId === cardId);
+    return [...this.records];
+  }
+
+  addRecord(data: Omit<PracticeRecord, 'id' | 'createdAt'>): PracticeRecord {
+    const now = new Date().toISOString();
+    const record: PracticeRecord = {
+      ...data,
+      id: generateId(),
+      createdAt: now
+    };
+    this.records.push(record);
+
+    if (data.result === 'completed') {
+      const stats = this.getCardReviewStats(data.cardId);
+      if (stats.completedCount >= STABILITY_THRESHOLD) {
+        const card = this.cards.find((c) => c.id === data.cardId);
+        if (card && card.status !== 'showcase') {
+          const idx = this.cards.indexOf(card);
+          this.cards[idx] = { ...card, status: 'showcase', updatedAt: now };
+        }
+      }
+    }
+
+    this.notify();
+    return record;
+  }
+
+  deleteRecord(recordId: string): void {
+    this.records = this.records.filter((r) => r.id !== recordId);
+    this.notify();
+  }
+
+  getCardReviewStats(cardId: string): CardReviewStats {
+    const cardRecords = this.records.filter((r) => r.cardId === cardId);
+    const completedRecords = cardRecords.filter((r) => r.result === 'completed');
+    const dates = cardRecords.map((r) => r.date).sort();
+    const totalDuration = cardRecords.reduce((sum, r) => sum + r.durationMin, 0);
+
+    return {
+      practiceCount: cardRecords.length,
+      lastPracticeDate: dates.length > 0 ? dates[dates.length - 1] : null,
+      isStable: completedRecords.length >= STABILITY_THRESHOLD,
+      completedCount: completedRecords.length,
+      totalDurationMin: totalDuration
+    };
   }
 }
 

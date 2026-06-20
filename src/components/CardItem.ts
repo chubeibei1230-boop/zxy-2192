@@ -1,6 +1,7 @@
 import type { Card } from '../types';
-import { STATUS_LABELS, STATUS_COLORS, DIFFICULTY_LABELS } from '../types';
+import { STATUS_LABELS, STATUS_COLORS, DIFFICULTY_LABELS, STABILITY_THRESHOLD } from '../types';
 import { formatDuration } from '../utils/router';
+import { store } from '../store';
 
 export class CardItem {
   private el: HTMLElement;
@@ -12,6 +13,7 @@ export class CardItem {
   private onDuplicate: (id: string) => void;
   private onToggleStar: (id: string) => void;
   private onToggleSelect: (id: string, selected: boolean) => void;
+  private onReview: (id: string) => void;
 
   constructor(
     card: Card,
@@ -21,6 +23,7 @@ export class CardItem {
       onDuplicate: (id: string) => void;
       onToggleStar: (id: string) => void;
       onToggleSelect: (id: string, selected: boolean) => void;
+      onReview: (id: string) => void;
     }
   ) {
     this.card = card;
@@ -29,6 +32,7 @@ export class CardItem {
     this.onDuplicate = handlers.onDuplicate;
     this.onToggleStar = handlers.onToggleStar;
     this.onToggleSelect = handlers.onToggleSelect;
+    this.onReview = handlers.onReview;
     this.el = document.createElement('article');
     this.el.className = 'card-item';
     this.render();
@@ -68,6 +72,7 @@ export class CardItem {
     const c = this.card;
     const diffWidth = (c.difficulty / 5) * 100;
     const stepsPreview = c.steps.split('\n')[0].slice(0, 40);
+    const stats = store.getCardReviewStats(c.id);
 
     this.el.innerHTML = `
       <div class="card-header" style="border-left:4px solid ${STATUS_COLORS[c.status]}">
@@ -78,6 +83,7 @@ export class CardItem {
           <span class="card-number">${c.patternNumber}</span>
           <span class="card-spec">${c.metalSpec}</span>
         </div>
+        ${stats.isStable ? '<span class="stable-badge" title="已形成稳定练习成果">✅ 稳定</span>' : ''}
         <button class="btn-icon card-star" title="${c.starred ? '取消收藏' : '重点收藏'}">
           ${c.starred ? '⭐' : '☆'}
         </button>
@@ -91,14 +97,17 @@ export class CardItem {
           <span class="card-badge" style="background:${STATUS_COLORS[c.status]}">${STATUS_LABELS[c.status]}</span>
           <span class="card-duration">⏱ ${formatDuration(c.durationMin)}</span>
           <span class="card-owner">👤 ${c.owner || '未分配'}</span>
+          ${stats.practiceCount > 0 ? `<span class="card-practice-count">📝 ${stats.practiceCount}次</span>` : ''}
         </div>
         <div class="card-preview">
           ${stepsPreview ? `<p>${stepsPreview}${c.steps.length > 40 ? '...' : ''}</p>` : '<p class="muted">暂无步骤描述</p>'}
         </div>
         ${c.mistakes ? `<div class="card-mistakes">⚠ ${c.mistakes.slice(0, 30)}${c.mistakes.length > 30 ? '...' : ''}</div>` : ''}
         ${c.reviewNotes ? `<div class="card-review">💡 ${c.reviewNotes.slice(0, 30)}${c.reviewNotes.length > 30 ? '...' : ''}</div>` : ''}
+        ${stats.practiceCount > 0 && !stats.isStable ? `<div class="card-stability-progress">稳定进度：${stats.completedCount}/${STABILITY_THRESHOLD}</div>` : ''}
       </div>
       <div class="card-actions">
+        <button class="btn btn-small card-review-btn">📝 复盘</button>
         <button class="btn btn-small card-edit">编辑</button>
         <button class="btn btn-small card-dup">复制</button>
         <button class="btn btn-small btn-danger card-del">删除</button>
@@ -114,6 +123,10 @@ export class CardItem {
       this.isSelected = cb.checked;
       this.el.classList.toggle('card-selected', cb.checked);
       this.onToggleSelect(c.id, cb.checked);
+    });
+    this.el.querySelector('.card-review-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.onReview(c.id);
     });
     this.el.querySelector('.card-edit')?.addEventListener('click', () => this.onEdit(c.id));
     this.el.querySelector('.card-dup')?.addEventListener('click', () => this.onDuplicate(c.id));

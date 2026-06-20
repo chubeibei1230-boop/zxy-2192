@@ -1,6 +1,7 @@
-import type { Card } from '../types';
+import type { Card, PracticeRecord } from '../types';
 
 const STORAGE_KEY = 'chasing-practice-cards';
+const RECORDS_KEY = 'chasing-practice-records';
 
 export function loadCards(): Card[] {
   try {
@@ -16,6 +17,22 @@ export function loadCards(): Card[] {
 
 export function saveCards(cards: Card[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+}
+
+export function loadRecords(): PracticeRecord[] {
+  try {
+    const raw = localStorage.getItem(RECORDS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as PracticeRecord[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
+export function saveRecords(records: PracticeRecord[]): void {
+  localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
 }
 
 function seedData(): Card[] {

@@ -1,5 +1,6 @@
 import type { Card } from '../types';
 import { STATUS_LABELS, DIFFICULTY_LABELS } from '../types';
+import { store } from '../store';
 
 const HEADERS = [
   '图案编号',
@@ -11,22 +12,36 @@ const HEADERS = [
   '责任人',
   '状态',
   '是否重点',
-  '复盘提示'
+  '复盘提示',
+  '累计练习次数',
+  '累计完成次数',
+  '累计实际耗时(分钟)',
+  '最近练习日期',
+  '是否已稳定'
 ];
 
 export function exportToCSV(cards: Card[]): void {
-  const rows = cards.map((c) => [
-    c.patternNumber,
-    c.metalSpec,
-    DIFFICULTY_LABELS[c.difficulty],
-    c.steps.replace(/\n/g, ' / '),
-    String(c.durationMin),
-    c.mistakes,
-    c.owner,
-    STATUS_LABELS[c.status],
-    c.starred ? '是' : '否',
-    c.reviewNotes
-  ]);
+  const rows = cards.map((c) => {
+    const stats = store.getCardReviewStats(c.id);
+
+    return [
+      c.patternNumber,
+      c.metalSpec,
+      DIFFICULTY_LABELS[c.difficulty],
+      c.steps.replace(/\n/g, ' / '),
+      String(c.durationMin),
+      c.mistakes,
+      c.owner,
+      STATUS_LABELS[c.status],
+      c.starred ? '是' : '否',
+      c.reviewNotes,
+      String(stats.practiceCount),
+      String(stats.completedCount),
+      String(stats.totalDurationMin),
+      stats.lastPracticeDate || '',
+      stats.isStable ? '是' : '否',
+    ];
+  });
 
   const csvContent =
     '\uFEFF' +

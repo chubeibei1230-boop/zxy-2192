@@ -6,7 +6,8 @@ const ALERT_META: Record<AlertType, { icon: string }> = {
   total_duration_too_long: { icon: '📊' },
   mistakes_empty: { icon: '📝' },
   owner_overloaded: { icon: '👥' },
-  starred_no_notes: { icon: '⭐' }
+  starred_no_notes: { icon: '⭐' },
+  stable_achieved: { icon: '✅' }
 };
 
 export class AlertPanel {

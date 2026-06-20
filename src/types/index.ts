@@ -54,6 +54,41 @@ export const DIFFICULTY_LABELS: Record<1 | 2 | 3 | 4 | 5, string> = {
   5: '高级'
 };
 
+export type ReviewResult = 'completed' | 'partial' | 'failed';
+
+export const REVIEW_RESULT_LABELS: Record<ReviewResult, string> = {
+  completed: '完成',
+  partial: '部分完成',
+  failed: '未完成'
+};
+
+export const REVIEW_RESULT_COLORS: Record<ReviewResult, string> = {
+  completed: '#27AE60',
+  partial: '#F39C12',
+  failed: '#E74C3C'
+};
+
+export const STABILITY_THRESHOLD = 3;
+
+export interface PracticeRecord {
+  id: string;
+  cardId: string;
+  date: string;
+  durationMin: number;
+  result: ReviewResult;
+  problems: string;
+  gains: string;
+  createdAt: string;
+}
+
+export interface CardReviewStats {
+  practiceCount: number;
+  lastPracticeDate: string | null;
+  isStable: boolean;
+  completedCount: number;
+  totalDurationMin: number;
+}
+
 export interface FilterCriteria {
   metalSpec?: string;
   difficulty?: number;
@@ -62,6 +97,8 @@ export interface FilterCriteria {
   minDuration?: number;
   maxDuration?: number;
   starredOnly?: boolean;
+  sortBy?: 'default' | 'lastPracticeDate' | 'practiceCount' | 'isStable';
+  stableFilter?: 'all' | 'stable' | 'unstable';
 }
 
 export type AlertType =
@@ -70,7 +107,8 @@ export type AlertType =
   | 'total_duration_too_long'
   | 'mistakes_empty'
   | 'owner_overloaded'
-  | 'starred_no_notes';
+  | 'starred_no_notes'
+  | 'stable_achieved';
 
 export interface ValidationAlert {
   type: AlertType;

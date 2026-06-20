@@ -5,6 +5,7 @@ import { AlertPanel } from './AlertPanel';
 import { CardGrid } from './CardGrid';
 import { CardForm } from './CardForm';
 import { RouteView } from './RouteView';
+import { ReviewModal } from './ReviewModal';
 import { validateAll } from '../utils/validators';
 import { filterCards } from '../utils/filters';
 import { exportToCSV } from '../utils/csv';
@@ -17,6 +18,7 @@ export class App {
   private cardGrid: CardGrid;
   private routeView: RouteView;
   private cardForm: CardForm;
+  private reviewModal: ReviewModal;
   private criteria: FilterCriteria = {};
   private isRouteMode = false;
   private editingId: string | null = null;
@@ -39,13 +41,15 @@ export class App {
       onDelete: (id) => store.deleteCard(id),
       onDuplicate: (id) => store.duplicateCard(id),
       onToggleStar: (id) => store.toggleStar(id),
-      onSelectionChange: () => this.handleSelectionChange()
+      onSelectionChange: () => this.handleSelectionChange(),
+      onReview: (id) => this.openReview(id)
     });
     this.routeView = new RouteView((id) => this.openForm(id));
     this.cardForm = new CardForm(
       (data) => this.handleSave(data),
       () => (this.editingId = null)
     );
+    this.reviewModal = new ReviewModal();
 
     this.render();
     this.unsubscribe = store.subscribe(() => this.refresh());
@@ -62,6 +66,7 @@ export class App {
     main.appendChild(this.routeView.getElement());
     this.root.appendChild(main);
     document.body.appendChild(this.cardForm.getElement());
+    document.body.appendChild(this.reviewModal.getElement());
     this.updateViewMode();
   }
 
@@ -153,6 +158,10 @@ export class App {
       this.editingId = null;
       this.cardForm.open();
     }
+  }
+
+  private openReview(id: string): void {
+    this.reviewModal.open(id);
   }
 
   private handleSave(data: Omit<Card, 'id' | 'createdAt' | 'updatedAt'>): void {
