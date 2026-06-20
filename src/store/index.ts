@@ -130,7 +130,22 @@ class Store {
   }
 
   deleteRecord(recordId: string): void {
+    const record = this.records.find((r) => r.id === recordId);
+    if (!record) return;
+    const cardId = record.cardId;
+
     this.records = this.records.filter((r) => r.id !== recordId);
+
+    const now = new Date().toISOString();
+    const stats = this.getCardReviewStats(cardId);
+    if (stats.completedCount < STABILITY_THRESHOLD) {
+      const card = this.cards.find((c) => c.id === cardId);
+      if (card && card.status === 'showcase') {
+        const idx = this.cards.indexOf(card);
+        this.cards[idx] = { ...card, status: 'in_progress', updatedAt: now };
+      }
+    }
+
     this.notify();
   }
 

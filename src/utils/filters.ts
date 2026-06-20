@@ -5,7 +5,14 @@ export function filterCards(
   cards: Card[],
   criteria: FilterCriteria
 ): Card[] {
+  const statsMap = new Map<string, CardReviewStats>();
+  for (const card of cards) {
+    statsMap.set(card.id, store.getCardReviewStats(card.id));
+  }
+
   let result = cards.filter((card) => {
+    const stats = statsMap.get(card.id)!;
+
     if (criteria.metalSpec && criteria.metalSpec !== card.metalSpec) {
       return false;
     }
@@ -37,19 +44,37 @@ export function filterCards(
       return false;
     }
     if (criteria.stableFilter && criteria.stableFilter !== 'all') {
-      const stats = store.getCardReviewStats(card.id);
       if (criteria.stableFilter === 'stable' && !stats.isStable) return false;
       if (criteria.stableFilter === 'unstable' && stats.isStable) return false;
+    }
+    if (
+      criteria.minPracticeCount !== undefined &&
+      stats.practiceCount < criteria.minPracticeCount
+    ) {
+      return false;
+    }
+    if (
+      criteria.maxPracticeCount !== undefined &&
+      stats.practiceCount > criteria.maxPracticeCount
+    ) {
+      return false;
+    }
+    if (criteria.minLastPracticeDate && stats.lastPracticeDate) {
+      if (stats.lastPracticeDate < criteria.minLastPracticeDate) return false;
+    }
+    if (criteria.maxLastPracticeDate && stats.lastPracticeDate) {
+      if (stats.lastPracticeDate > criteria.maxLastPracticeDate) return false;
+    }
+    if (criteria.lastPracticeDaysAgo !== undefined) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - criteria.lastPracticeDaysAgo);
+      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      if (!stats.lastPracticeDate || stats.lastPracticeDate < cutoffStr) return false;
     }
     return true;
   });
 
   if (criteria.sortBy && criteria.sortBy !== 'default') {
-    const statsMap = new Map<string, CardReviewStats>();
-    for (const card of result) {
-      statsMap.set(card.id, store.getCardReviewStats(card.id));
-    }
-
     result.sort((a, b) => {
       const sa = statsMap.get(a.id)!;
       const sb = statsMap.get(b.id)!;

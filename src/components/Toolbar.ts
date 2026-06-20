@@ -154,6 +154,40 @@ export class Toolbar {
             <option value="unstable" ${sel(c.stableFilter, 'unstable')}>未稳定</option>
           </select>
         </div>
+        <div class="filter-group filter-duration">
+          <label>练习次数</label>
+          <div class="duration-inputs">
+            <input type="number" min="0" class="filter-input" data-filter="minPracticeCount" placeholder="≥" value="${
+              c.minPracticeCount !== undefined ? c.minPracticeCount : ''
+            }" />
+            <span>~</span>
+            <input type="number" min="0" class="filter-input" data-filter="maxPracticeCount" placeholder="≤" value="${
+              c.maxPracticeCount !== undefined ? c.maxPracticeCount : ''
+            }" />
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>最近练习</label>
+          <select class="filter-select" data-filter="lastPracticeDaysAgo">
+            <option value="" ${!c.lastPracticeDaysAgo ? 'selected' : ''}>全部</option>
+            <option value="7" ${sel(String(c.lastPracticeDaysAgo), '7')}>近7天内</option>
+            <option value="14" ${sel(String(c.lastPracticeDaysAgo), '14')}>近14天内</option>
+            <option value="30" ${sel(String(c.lastPracticeDaysAgo), '30')}>近30天内</option>
+            <option value="60" ${sel(String(c.lastPracticeDaysAgo), '60')}>近60天内</option>
+          </select>
+        </div>
+        <div class="filter-group filter-duration">
+          <label>练习日期范围</label>
+          <div class="duration-inputs">
+            <input type="date" class="filter-input" data-filter="minLastPracticeDate" value="${
+              c.minLastPracticeDate || ''
+            }" />
+            <span>~</span>
+            <input type="date" class="filter-input" data-filter="maxLastPracticeDate" value="${
+              c.maxLastPracticeDate || ''
+            }" />
+          </div>
+        </div>
         <button class="btn btn-small btn-reset" title="重置筛选">重置</button>
       </div>
       <div class="batch-bar" style="display:${this.selectedCount > 0 ? 'flex' : 'none'}">
@@ -211,6 +245,14 @@ export class Toolbar {
     const starredOnly = get<HTMLInputElement>('starredOnly')?.checked || undefined;
     const sortBy = (get<HTMLSelectElement>('sortBy')?.value as FilterCriteria['sortBy']) || 'default';
     const stableFilter = (get<HTMLSelectElement>('stableFilter')?.value as FilterCriteria['stableFilter']) || 'all';
+    const minPracticeCountRaw = get<HTMLInputElement>('minPracticeCount')?.value;
+    const minPracticeCount = minPracticeCountRaw ? Number(minPracticeCountRaw) : undefined;
+    const maxPracticeCountRaw = get<HTMLInputElement>('maxPracticeCount')?.value;
+    const maxPracticeCount = maxPracticeCountRaw ? Number(maxPracticeCountRaw) : undefined;
+    const lastPracticeDaysAgoRaw = get<HTMLSelectElement>('lastPracticeDaysAgo')?.value;
+    const lastPracticeDaysAgo = lastPracticeDaysAgoRaw ? Number(lastPracticeDaysAgoRaw) : undefined;
+    const minLastPracticeDate = get<HTMLInputElement>('minLastPracticeDate')?.value || undefined;
+    const maxLastPracticeDate = get<HTMLInputElement>('maxLastPracticeDate')?.value || undefined;
 
     this.criteria = {
       metalSpec,
@@ -221,7 +263,12 @@ export class Toolbar {
       maxDuration,
       starredOnly,
       sortBy,
-      stableFilter
+      stableFilter,
+      minPracticeCount,
+      maxPracticeCount,
+      lastPracticeDaysAgo,
+      minLastPracticeDate,
+      maxLastPracticeDate
     };
     this.onChange(this.criteria);
   }

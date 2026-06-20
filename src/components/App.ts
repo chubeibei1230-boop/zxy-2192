@@ -79,11 +79,8 @@ export class App {
       const filtered = filterCards(all, this.criteria);
       this.cardGrid.update(filtered);
     } else {
-      const route = generatePracticeRoute(
-        this.criteria.starredOnly
-          ? filterCards(all, { starredOnly: true })
-          : all
-      );
+      const filtered = filterCards(all, this.criteria);
+      const route = generatePracticeRoute(filtered);
       this.routeView.update(route);
     }
 
@@ -100,9 +97,10 @@ export class App {
 
   private handleExport(): void {
     const all = store.getCards();
+    const filtered = filterCards(all, this.criteria);
     const data = this.isRouteMode
-      ? generatePracticeRoute(all)
-      : filterCards(all, this.criteria);
+      ? generatePracticeRoute(filtered)
+      : filtered;
     if (data.length === 0) {
       alert('暂无数据可导出');
       return;

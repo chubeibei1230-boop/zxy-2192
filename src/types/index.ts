@@ -99,6 +99,11 @@ export interface FilterCriteria {
   starredOnly?: boolean;
   sortBy?: 'default' | 'lastPracticeDate' | 'practiceCount' | 'isStable';
   stableFilter?: 'all' | 'stable' | 'unstable';
+  minPracticeCount?: number;
+  maxPracticeCount?: number;
+  lastPracticeDaysAgo?: number;
+  minLastPracticeDate?: string;
+  maxLastPracticeDate?: string;
 }
 
 export type AlertType =
